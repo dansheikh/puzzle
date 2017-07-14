@@ -4,11 +4,13 @@ module Lib
     , formatGrid
     , outputGrid
     , findWordInLine
+    , skew
+    , getLines
     , findWord
     , findWords
     ) where
 
-import Data.List (isInfixOf)
+import Data.List (isInfixOf, transpose)
 import Data.Maybe (catMaybes)
 
 type Grid = [String]
@@ -22,9 +24,26 @@ outputGrid grid = putStrLn $ formatGrid grid
 findWordInLine :: String -> String -> Bool
 findWordInLine = isInfixOf
 
+skew :: Grid -> Grid
+skew [] = []
+skew (x:xs) = x : skew (map indent xs)
+  where indent line = '_' : line
+
+diagonalize :: Grid -> Grid
+diagonalize = transpose . skew
+
+getLines :: Grid -> [String]
+getLines grid = 
+  let horizontal = grid
+      vertical = transpose grid
+      diagonal = diagonalize grid
+      altDiagonal = diagonalize (map reverse grid)
+      lines = horizontal ++ vertical ++ diagonal ++ altDiagonal
+  in lines ++ map reverse lines
+
 findWord :: Grid -> String -> Maybe String
 findWord grid word =
-  let lines = grid ++ map reverse grid 
+  let lines = getLines grid
       found = or $ map (findWordInLine word) lines
   in if found then Just word else Nothing
 
@@ -40,7 +59,7 @@ grid = ["__C________R___"
        ,"__PHP____H_____"
        ,"____S_LREP_____"
        ,"____I__M_Y__L__"
-       ,"____I_E__T_O___"
+       ,"____L_E__T_O___"
        ,"_________HB____"
        ,"_________O_____"
        ,"________CN_____"
