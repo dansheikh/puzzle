@@ -1,5 +1,6 @@
 module Lib
     ( Cell(Cell, Indent)
+    , Game(gameGrid, gameWords)
     , cellToChar
     , formatGrid
     , outputGrid
@@ -13,16 +14,29 @@ module Lib
     , getLines
     , findWord
     , findWords
+    , makeGame
+    , totalWords
+    , score
+    , playGame
+    , formatGame
+    , completed
     ) where
 
 import Data.List (isInfixOf, transpose, zipWith)
 import Data.Maybe (catMaybes, listToMaybe)
+import qualified Data.Map as Dict
 
 type Grid a = [[a]]
 
 data Cell = Cell (Integer, Integer) Char
           | Indent
           deriving (Eq, Ord, Show)
+
+data Game = Game
+            { gameGrid :: (Grid Cell),
+              gameWords :: (Dict.Map String (Maybe [Cell]))
+            }
+          deriving Show
 
 cellToChar :: Cell -> Char
 cellToChar (Cell _ c) = c
@@ -93,3 +107,39 @@ findWords :: Grid Cell -> [String] -> [[Cell]]
 findWords grid words =
   let foundWords = map (findWord grid) words
   in catMaybes foundWords
+
+makeGame :: Grid Char -> [String] -> Game
+makeGame grid words =
+  let gwc = gridWithCoords grid
+      tuplify word = (word, Nothing)
+      list = map tuplify words
+      dict = Dict.fromList list
+  in Game gwc dict
+
+totalWords :: Game -> Int
+totalWords game = length . Dict.keys $ gameWords game
+
+score :: Game -> Int
+score game = length . catMaybes . Dict.elems $ gameWords game
+
+playGame :: Game -> String -> Game
+playGame game word | not $ Dict.member word (gameWords game) = game
+playGame game word =
+  let grid = gameGrid game
+      foundWord = findWord grid word
+  in case foundWord of
+    Nothing -> game
+    Just cs ->
+        let dict = gameWords game
+            newDict = Dict.insert word foundWord dict
+        in game { gameWords = newDict }
+
+formatGame :: Game -> String
+formatGame game@(Game grid dict) = formatGrid grid
+                                   ++ "\n\n"
+                                   ++ (show $ score game)
+                                   ++ "/"
+                                   ++ (show $ totalWords game)
+
+completed :: Game -> Bool
+completed game = score game == totalWords game
